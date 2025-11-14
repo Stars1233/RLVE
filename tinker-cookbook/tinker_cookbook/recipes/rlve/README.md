@@ -1,4 +1,11 @@
 # Tinker for RLVE
+This implementation of RLVE is built on Tinker, which decouples environments from the training loop to enable flexible adaptation.  
+This separation allows a clean and modular design that makes environments dynamically adaptive to the policy.
+
+<div align="center">
+  <img src="../../../assets/rlve_showcase.png" width="60%" />
+</div>
+
 
 ## Installation
 
@@ -42,3 +49,12 @@ python -m tinker_cookbook.recipes.rlve.train model_name="Qwen/Qwen3-4B-Instruct-
 - `min_metric_to_increase_difficulty`: Minimum metric to increase difficulty (default: 0.9)
 
 These arguments are aligned with those defined [here](https://github.com/Zhiyuan-Zeng/RLVE/blob/main/slime/utils/arguments.py#L845-#L899).
+
+### Difference from the Implementation Using SLiME
+
+In this RLVE implementation based on Tinker, we made a minor modification compared to the main implementation (used in our paper’s original experiments) to avoid altering the primary training loop.
+
+Specifically, instead of checking performance statistics and updating difficulty at the end of each training step, we integrate these operations directly within the environment implementation.
+Whenever an environment is queried to provide a reward, it simultaneously updates its internal statistics and performs the difficulty adjustment.  
+
+We expect this difference to have a negligible effect on the overall dynamics of difficulty adaptation, particularly when training jointly on a sufficiently large number of environments.

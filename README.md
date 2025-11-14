@@ -270,3 +270,5 @@ bash scripts/evaluation/OpenThinker3-1.5B/eval_LiveCodeBench.sh "../[OpenThinker
 
 ## RLVE on Tinker
 First run `cd tinker-cookbook` to enter the directory, and then check out the [README](tinker-cookbook/tinker_cookbook/recipes/rlve/README.md) for details on installation and usage of RLVE recipe.
+
+**This Tinker-based implementation also shows how RLVE can be incorporated without changes to the main training loop of your RL framework.**

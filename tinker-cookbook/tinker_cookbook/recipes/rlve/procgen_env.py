@@ -117,6 +117,25 @@ class RLVEManager :
                 self.environment2accuracy[environment] = dict(accuracy = 0, num_samples = 0)
 
         return log_dict
+    
+
+    def update_single_sample(self, environment : str, problem_difficulty : int, correct : bool) -> None :
+        maximum_difficulty = self.environment2difficulty[environment]
+        assert problem_difficulty <= maximum_difficulty, "The difficulty of the sample is higher than the current difficulty of the environment, which should not happen."
+        if problem_difficulty < maximum_difficulty :
+            pass
+        else :
+            self.environment2accuracy[environment]["num_samples"] += 1
+            self.environment2accuracy[environment]["accuracy"] += int(correct)
+
+        num_samples, accuracy = self.environment2accuracy[environment]["num_samples"], self.environment2accuracy[environment]["accuracy"]
+        if num_samples >= self.args["min_prompts_before_difficulty_check"] * self.args["n_samples_per_prompt"] :
+            accuracy = accuracy / num_samples
+
+            if accuracy >= self.args["min_metric_to_increase_difficulty"] :
+                self.environment2difficulty[environment] += 1
+
+            self.environment2accuracy[environment] = dict(accuracy = 0, num_samples = 0)
 
 
 
@@ -132,6 +151,7 @@ class ProcgenEnv(ProblemEnv):
         apply_chat_template: bool,
         answer_marker_type: str,
         renderer: renderers.Renderer,
+        rlve_manager: RLVEManager = None,
         convo_prefix: list[renderers.Message] | None = None,
         format_coef: float = 0,
     ):
@@ -144,6 +164,8 @@ class ProcgenEnv(ProblemEnv):
         self.answer_marker_type = answer_marker_type
         self.renderer
         self.format_coef = format_coef
+
+        self.rlve_manager = rlve_manager
 
     def get_question(self):
         return self.problem.prompt_generator()
@@ -173,7 +195,10 @@ class ProcgenEnv(ProblemEnv):
         if hasattr(self.problem, "passing_reward_threshold"):
             config["passing_reward_threshold"] = self.problem.passing_reward_threshold
         problem.set_config(config)
-        return self.problem.verifier(response)
+        
+        verifier_result = self.problem.verifier(response)
+        self.rlve_manager.update_single_sample(self.environment, self.problem_difficulty, verifier_result["accuracy"] == 1)
+        return verifier_result
 
     async def initial_observation(self) -> tuple[Observation, StopCondition]:
         TinyZero_TEMPLATE = """A conversation between User and Assistant. The user asks a question, and the assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. Show your work in <think> </think> tags, and return the final answer in <answer> </answer> tags."""
@@ -226,7 +251,8 @@ class ProcgenEnvGroupBuilder(EnvGroupBuilder):
                        self.rlve_manager.args["reward_key"], 
                        self.rlve_manager.args["apply_chat_template"], 
                        self.rlve_manager.args["answer_marker_type"],
-                       self.renderer)
+                       self.renderer,
+                       self.rlve_manager)
             for _ in range(self.num_envs)
         ]
 

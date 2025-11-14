@@ -1019,10 +1019,6 @@ async def do_sync_training(
             if trajectory_group is not None
         ]
 
-        if hasattr(dataset, "rlve_manager"):
-            update_metrics = dataset.rlve_manager.update([trajectory.transitions[-1] for trajectory_group in trajectory_groups_P for trajectory in trajectory_group.trajectories_G])
-            metrics.update(update_metrics)
-
         # Train step
         sampling_client, train_step_metrics = await do_train_step_and_get_sampling_client(
             cfg,
